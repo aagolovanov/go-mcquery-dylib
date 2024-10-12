@@ -5,38 +5,38 @@ package main
 */
 import "C"
 import (
+	"context"
 	"encoding/json"
-	"github.com/dreamscached/minequery/v2"
+	"github.com/mcstatus-io/mcutil/v4/status"
 	"time"
 )
 
-//export PingServer
-func PingServer(host *C.char, port C.ushort, result **C.char, errMsg **C.char) C.int {
+//export GetPlayers
+func GetPlayers(host *C.char, port C.ushort, result **C.char, errMsg **C.char) C.int {
 	goHost := C.GoString(host)
 	goPort := uint16(port)
 
-	pinger := minequery.NewPinger(
-		minequery.WithTimeout(5*time.Second),
-		minequery.WithUseStrict(true),
-		minequery.WithProtocolVersion16(minequery.Ping16ProtocolVersion162),
-		minequery.WithProtocolVersion17(minequery.Ping17ProtocolVersion172),
-	)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 
-	beta18, err := pinger.PingBeta18(goHost, int(goPort))
+	defer cancel()
+
+	response, err := status.Modern(ctx, goHost, goPort)
 	if err != nil {
 		*errMsg = C.CString(err.Error())
 		return -1 // Error code
 	}
 
+	players := response.Players
+
 	// Marshal the result into JSON
-	resultJSON, err := json.Marshal(beta18)
+	res, err := json.MarshalIndent(players, "", "\t")
 	if err != nil {
 		*errMsg = C.CString(err.Error())
 		return -1
 	}
 
 	// Convert Go string to C string
-	*result = C.CString(string(resultJSON))
+	*result = C.CString(string(res))
 	// Caller is responsible for freeing the returned strings
 	return 0 // Success
 }
