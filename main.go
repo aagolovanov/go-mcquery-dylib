@@ -29,7 +29,7 @@ func GetPlayers(host *C.char, port C.ushort, result **C.char, errMsg **C.char) C
 	players := response.Players
 
 	// Marshal the result into JSON
-	res, err := json.MarshalIndent(players, "", "\t")
+	res, err := json.Marshal(players)
 	if err != nil {
 		*errMsg = C.CString(err.Error())
 		return -1
